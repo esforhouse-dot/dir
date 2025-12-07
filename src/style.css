@@ -1,0 +1,562 @@
+/* --- CAD / ENGINEERING STYLE v3.5 (COMPACT BOM) --- */
+:root { 
+    --icon-scale: 0.8; 
+    --ui-bg: rgba(20, 24, 28, 0.98); 
+    --ui-border: rgba(255, 255, 255, 0.15);
+    --ui-radius: 4px; 
+    --neon-blue: #00AEEF; 
+    --active-color: #00FF99;
+    --danger-color: #FF4444;
+}
+
+body, html { 
+    margin: 0; padding: 0; width: 100%; height: 100%; 
+    font-family: 'Roboto Mono', 'Segoe UI', monospace; 
+    background: #0f1115; 
+    color: #e0e0e0;
+    overflow: hidden; 
+    touch-action: none; 
+    overscroll-behavior: none;
+}
+
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+
+/* Оптимизация тач-интерфейсов */
+button, input, select, .icon-btn, .minimal-btn, .color-btn {
+    touch-action: manipulation; 
+}
+
+/* КАРТА */
+#map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: #0f1115; }
+
+/* 1. КАРТА В РЕЖИМЕ "BLUEPRINT" (ЧЕРТЕЖ) */
+[class*="ymaps-2"][class*="-ground-pane"] {
+    filter: grayscale(100%) invert(88%) contrast(90%) brightness(80%);
+}
+[class*="ymaps-2"][class*="-places-pane"] {
+    filter: grayscale(100%) brightness(120%);
+}
+
+/* Курсоры */
+#map.crosshair-active { cursor: crosshair !important; }
+#map.eraser-active { 
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23FF3333" stroke-width="2"><path d="M18 13v6H6v-6l6-6 6 6z"/><path d="M12 7L6 13"/></svg>') 12 12, crosshair !important; 
+}
+
+/* Индикатор сохранения */
+#save-indicator { 
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
+    background: #004400; border: 1px solid #00aa00;
+    color: #fff; padding: 5px 15px; border-radius: 4px; font-size: 12px; 
+    opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 6000; 
+    display: flex; align-items: center; gap: 5px; 
+}
+#save-indicator.show { opacity: 1; }
+
+/* 2. ИНТЕРФЕЙС - ТУЛБАР */
+#top-toolbar { 
+    position: absolute; top: 15px; left: 50%; transform: translateX(-50%); 
+    height: 40px; 
+    background: var(--ui-bg); 
+    border: 1px solid var(--ui-border); 
+    border-radius: var(--ui-radius);
+    padding: 0 10px; 
+    display: flex; align-items: center; gap: 4px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    z-index: 5000;
+    overflow-x: auto;
+    max-width: 95vw;
+}
+#top-toolbar::-webkit-scrollbar { display: none; }
+
+/* Кнопки */
+.icon-btn { 
+    width: 32px; height: 32px; 
+    border-radius: 4px; 
+    opacity: 0.7; 
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.icon-btn:hover { background: rgba(255,255,255,0.1); opacity: 1; transform: none; }
+.icon-btn.active svg { fill: var(--active-color); filter: none; }
+.icon-btn svg { width: 18px; height: 18px; fill: #aaa; filter: none; }
+
+/* --- TOOLBAR DROPDOWN (FIXED) --- */
+.toolbar-dropdown {
+    position: fixed; 
+    top: 60px; 
+    left: 50%;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 4px;
+    padding: 4px;
+    display: none; 
+    flex-direction: column;
+    gap: 4px;
+    z-index: 7000; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+.toolbar-dropdown.open { display: flex; }
+
+.style-option {
+    width: 40px; height: 24px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid transparent; border-radius: 2px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.style-option:hover { background: rgba(255,255,255,0.1); border-color: #666; }
+
+.divider { height: 20px; background: var(--ui-border); margin: 0 5px; width: 1px; flex-shrink: 0; }
+
+/* Поиск */
+.search-box { 
+    height: 28px; 
+    background: #000; 
+    border: 1px solid #333; 
+    border-radius: 4px; 
+    margin-right: 5px;
+    display: flex; align-items: center;
+    padding: 0 5px;
+}
+.search-icon { width: 14px; height: 14px; fill: #666; margin-right: 5px; }
+#search-input { 
+    background: none; border: none; outline: none; 
+    font-family: 'Roboto Mono', monospace; font-size: 12px; color: #fff; width: 100px;
+}
+
+/* Палитра (Вверху) */
+.color-btn { 
+    width: 16px; height: 16px; 
+    border-radius: 2px; border: 1px solid #555; 
+    cursor: pointer; flex-shrink: 0;
+}
+.color-btn.active { transform: scale(1.2); border: 1px solid #fff; box-shadow: none; z-index: 2;}
+
+/* Слайдеры */
+.opacity-control { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.opacity-control svg { width: 16px; height: 16px; opacity: 0.7; stroke: #ccc; }
+input[type=range] { -webkit-appearance: none; width: 50px; height: 2px; background: #444; border-radius: 0; outline: none; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 2px; background: #ccc; cursor: pointer; box-shadow: none; }
+
+/* 3. ЛЕВАЯ ПАНЕЛЬ И МЕНЮ */
+#left-panel { position: absolute; top: 70px; left: 15px; z-index: 5001; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+
+#tool-trigger, #esc-btn {
+    pointer-events: auto;
+    border-radius: var(--ui-radius);
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    height: 36px; min-width: 36px;
+    font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--neon-blue);
+    cursor: pointer;
+    overflow: hidden;
+}
+#tool-trigger:hover, #esc-btn:hover { background: rgba(40,40,40,0.9); }
+#tool-trigger.active-tool { background: #000; border-color: var(--neon-blue); padding: 0 10px; }
+.trigger-icon { width: 18px; height: 18px; fill: var(--neon-blue); }
+.trigger-text { display: none; color: #fff; text-transform: uppercase; }
+#tool-trigger.active-tool .trigger-icon { display: none; }
+#tool-trigger.active-tool .trigger-text { display: block; }
+
+#esc-btn { color: var(--danger-color); }
+
+#tools-menu {
+    position: fixed; left: 60px; top: 70px; z-index: 6000;
+    border-radius: var(--ui-radius);
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    padding: 6px;
+    display: flex; flex-direction: column; gap: 4px;
+    opacity: 0; visibility: hidden; transform: translateX(-10px);
+    transition: 0.2s;
+    min-width: 150px;
+}
+#tools-menu.open { opacity: 1; visibility: visible; transform: translateX(0); }
+#tools-menu.floating { margin: 0; z-index: 9999; }
+
+.minimal-btn {
+    background: transparent; border: none; color: #ccc; 
+    font-size: 12px; padding: 6px 10px; border-radius: 4px;
+    font-family: 'Roboto Mono', monospace; text-align: left; cursor: pointer; width: 100%;
+}
+.minimal-btn:hover { background: rgba(255,255,255,0.1); padding-left: 14px; }
+.minimal-btn.selected { color: var(--neon-blue); font-weight: bold; background: rgba(0, 174, 239, 0.1); }
+
+/* 4. ИКОНКИ НА КАРТЕ (CAD STYLE) */
+.custom-icon { width: 40px; height: 40px; transform: translate(-50%, -50%) scale(var(--icon-scale)); cursor: pointer; }
+.custom-icon svg { width: 100%; height: 100%; filter: drop-shadow(0 0 1px #000); }
+
+.neon-light { 
+    width: 10px; height: 10px; 
+    background: #000; 
+    border: 1.5px solid var(--obj-color, #ffcc00); 
+    border-radius: 50%;
+    position: relative; transform: translate(-50%, -50%) scale(var(--icon-scale)); 
+    cursor: pointer; box-shadow: none;
+}
+.neon-light::before, .neon-light::after { display: none; }
+
+[class*="ymaps-2"][class*="-polyline"] { opacity: 0.9 !important; }
+
+/* 5. ИНФОБАР И ПРОЧЕЕ */
+#info-bar {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 4000;
+    border-radius: 4px; 
+    background: var(--ui-bg); 
+    color: #aaa; border: 1px solid var(--ui-border);
+    font-size: 10px; padding: 4px 10px; pointer-events: none;
+    display: flex; gap: 10px;
+}
+.info-divider { width: 1px; height: 10px; background: #555; }
+.info-label { color: #666; margin-right: 4px; }
+
+/* --- МОДАЛЬНЫЕ ОКНА (CAD DESIGN) --- */
+#modal-overlay, #cable-modal-overlay { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); 
+    z-index: 10000; 
+    display: none; 
+    justify-content: center; align-items: center; 
+}
+
+#modal-box, #cable-modal-box { 
+    background: #1a1e24; 
+    border: 1px solid #444; 
+    border-radius: 4px; 
+    padding: 24px; 
+    width: 340px; 
+    color: #eee; 
+    box-shadow: 0 15px 50px rgba(0,0,0,0.9);
+    display: flex; flex-direction: column; 
+    gap: 16px; 
+}
+
+/* Заголовки в модальном окне */
+.modal-header, #modal-box h3 { 
+    font-size: 14px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+    font-weight: 700; 
+    color: #fff; 
+    margin: 0; 
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 5px;
+}
+
+/* Блок формы (label + input) */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 11px;
+    color: #888; 
+    font-weight: 500;
+    margin-left: 2px;
+}
+
+/* --- ИСПРАВЛЕНИЕ СТРЕЛОЧЕК SELECT --- */
+#modal-input, #cable-modal-box select, #cable-modal-box input { 
+    background: #111; 
+    border: 1px solid #333; 
+    border-radius: 4px; 
+    color: #fff; 
+    padding: 10px 12px; 
+    padding-right: 30px; 
+    font-family: 'Roboto Mono', monospace; 
+    font-size: 12px; 
+    width: 100%; 
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+#modal-input:focus, #cable-modal-box select:focus, #cable-modal-box input:focus {
+    border-color: var(--neon-blue);
+    background: #000;
+}
+
+/* Кнопки в модальном окне */
+.modal-btns { 
+    display: flex; gap: 12px; justify-content: flex-end; margin-top: 10px; border-top: 1px solid #333; padding-top: 15px; 
+}
+.modal-btn { 
+    padding: 8px 18px; 
+    border-radius: 4px; border: none; cursor: pointer; 
+    font-size: 12px; font-weight: 600; font-family: 'Roboto Mono'; 
+    transition: 0.2s;
+}
+.modal-btn.secondary { background: #333; color: #aaa; }
+.modal-btn.secondary:hover { background: #444; color: #fff; }
+.modal-btn.primary { background: var(--neon-blue); color: #fff; }
+.modal-btn.primary:hover { background: #009ecc; }
+
+/* БОКОВЫЕ ПАНЕЛИ */
+.side-panel { 
+    position: fixed; top: 60px; right: 20px; z-index: 5000; 
+    width: 300px; max-height: 80vh; 
+    background: #161a1f; 
+    border-radius: 6px; border: 1px solid var(--ui-border); 
+    color: #fff; transform: translateX(120%); transition: transform 0.3s; 
+    display: flex; flex-direction: column; visibility: hidden;
+}
+.side-panel.open { transform: translateX(0); visibility: visible; }
+.panel-header { padding: 10px 15px; border-bottom: 1px solid #333; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #888; display: flex; justify-content: space-between; align-items: center; }
+.panel-body { padding: 15px; overflow-y: auto; }
+.panel-close { cursor: pointer; }
+
+/* --- СМЕТА / BOM (COMPACT CAD STYLE) --- */
+#bom-content { 
+    display: flex; flex-direction: column; 
+    gap: 0px; /* Убрали зазоры между элементами для компактности */
+}
+
+.bom-section-title { 
+    font-size: 10px; /* Уменьшили шрифт */
+    text-transform: uppercase; 
+    color: var(--neon-blue); 
+    font-weight: 700; 
+    letter-spacing: 1px; 
+    margin-top: 12px; 
+    margin-bottom: 4px; 
+    padding-bottom: 2px; 
+    border-bottom: 1px solid #333; 
+}
+
+.bom-row { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 3px 0; /* Уменьшили отступы */
+    border-bottom: 1px solid rgba(255,255,255,0.03); 
+}
+
+.bom-label { display: flex; flex-direction: column; gap: 1px; }
+
+.bom-label-main { 
+    font-size: 11px; /* Чуть меньше */
+    font-weight: 600; 
+    color: #fff; 
+    display: flex; align-items: center; gap: 6px; 
+}
+
+.bom-label-sub { 
+    font-size: 9px; /* Мелкий подстрочник */
+    color: #888; 
+    margin-left: 2px;
+}
+
+.bom-value { 
+    font-family: 'Roboto Mono', monospace; 
+    font-size: 11px; /* Вровень с названием */
+    font-weight: 600; 
+    color: #eee; 
+    white-space: nowrap; 
+}
+
+.bom-color { 
+    width: 8px; height: 8px; /* Чуть меньше маркеры цвета */
+    border-radius: 50%; 
+    box-shadow: 0 0 4px currentColor; 
+    flex-shrink: 0; 
+}
+
+.bom-total { 
+    margin-top: 10px; 
+    text-align: right; 
+    font-size: 13px; 
+    font-weight: 700; 
+    color: var(--active-color); 
+    border-top: 1px solid #444; 
+    padding-top: 8px; 
+}
+
+.btn-export { 
+    margin-top: 10px; 
+    width: 100%; 
+    padding: 8px; 
+    background: #1a1e24; 
+    border: 1px solid #00aa00; 
+    border-radius: 4px; 
+    color: #fff; 
+    font-family: 'Roboto Mono', monospace; 
+    font-size: 11px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    display: flex; align-items: center; justify-content: center; 
+    gap: 8px; 
+    transition: 0.2s; 
+    text-transform: uppercase; 
+}
+.btn-export:hover { background: rgba(0, 170, 0, 0.2); box-shadow: 0 0 10px rgba(0, 170, 0, 0.2); }
+
+/* --- МЕТКИ И ПОДПИСИ (CAD STYLE FIXED) --- */
+
+/* 1. Постоянные подписи на карте */
+.label-box {
+    font-family: 'Roboto Mono', monospace; 
+    font-size: 11px;
+    font-weight: 500;
+    background: #000000; color: #ffffff; border: 1px solid #666; border-radius: 2px;
+    padding: 3px 6px; white-space: nowrap; display: inline-block; 
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.8); line-height: 1.1; z-index: 1000;
+}
+
+/* 2. Текстовые объекты */
+.neon-text-label {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    
+    background: rgba(0,0,0,0.85); 
+    color: #fff !important; 
+    border: 1px solid var(--obj-color); 
+    border-radius: 2px;
+    
+    padding: 4px 8px;
+    
+    /* --- ИСПРАВЛЕННАЯ ЛОГИКА РАЗМЕРОВ --- */
+    
+    /* 1. Ширина */
+    width: max-content; /* Заставляет блок растягиваться под текст */
+    min-width: 50px;    /* Минимальная ширина */
+    max-width: 250px;   /* Максимальная ширина, после которой начнется перенос */
+    
+    /* 2. Перенос текста */
+    white-space: pre-wrap;      /* Сохраняет Enter и пробелы */
+    overflow-wrap: break-word;  /* Переносит длинные слова ТОЛЬКО если они не влезают в max-width */
+    word-wrap: break-word;      /* Дубликат для старых браузеров */
+    
+    text-align: center;
+    display: inline-block;
+    
+    text-shadow: none;
+    transform: translate(-50%, -50%); 
+    
+    pointer-events: auto; 
+    cursor: pointer; 
+    user-select: none;
+}
+
+/* 3. Всплывающая подсказка (Hint) */
+.neon-hint {
+    background: #111; color: #fff; border: 1px solid #666; 
+    padding: 6px 10px; border-radius: 2px; font-family: 'Roboto Mono', monospace; 
+    font-size: 11px; width: max-content; max-width: 300px; white-space: pre-wrap; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+}
+
+
+/* КОНТЕКСТНОЕ МЕНЮ (ПКМ) */
+#context-menu { 
+    display: none; position: absolute; z-index: 9000; 
+    background: #1a1e24; border: 1px solid #444; border-radius: 2px; 
+    padding: 4px; flex-direction: column; gap: 2px; min-width: 180px;
+    box-shadow: 4px 4px 15px rgba(0,0,0,0.5);
+}
+.ctx-item { 
+    padding: 6px 10px; font-size: 11px; font-family: 'Roboto Mono', monospace; 
+    cursor: pointer; display: flex; align-items: center; gap: 10px; 
+    color: #ccc; transition: background 0.1s; border-radius: 2px;
+}
+.ctx-item:hover { background: var(--neon-blue); color: #fff; }
+.ctx-item:hover .ctx-icon { fill: #fff; }
+.ctx-icon { width: 14px; height: 14px; fill: #888; flex-shrink: 0; }
+.ctx-divider { height: 1px; background: #333; margin: 4px 0; }
+
+.ctx-row { display: flex; gap: 4px; padding: 4px 8px; justify-content: flex-start; flex-wrap: wrap; }
+.color-btn-mini { 
+    width: 14px; height: 14px; border-radius: 1px; border: 1px solid #555; 
+    cursor: pointer; box-sizing: border-box;
+}
+.color-btn-mini:hover { transform: scale(1.2); border-color: #fff; z-index: 2; }
+
+.weight-btn { flex: 1; height: 22px; background: #2a2e35; border: 1px solid #444; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
+.weight-btn:hover { background: #3a3e45; border-color: #666; }
+
+/* ПРЕВЬЮ СТИЛЕЙ ЛИНИЙ */
+.line-preview { width: 25px; height: 0; border-bottom-width: 2px; border-bottom-color: #ccc; }
+.line-preview.solid { border-bottom-style: solid; }
+.line-preview.dash { border-bottom-style: dashed; }
+.line-preview.dot { border-bottom-style: dotted; } 
+
+.ctx-slider { width: 100% !important; margin: 0 5px; height: 4px; }
+
+
+/* --- МЕНЮ ДЛЯ ТОЧЕК (ПЛАВАЮЩЕЕ ЛКМ) --- */
+.point-ctrl-wrapper { 
+    position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 10000; pointer-events: none; 
+}
+
+/* Вертикальная палитра - СЛЕВА */
+.point-palette-container { 
+    pointer-events: auto; position: absolute; right: 25px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 4px; 
+    background: #1a1e24; padding: 4px; border-radius: 2px; border: 1px solid #444; 
+    box-shadow: 4px 4px 10px rgba(0,0,0,0.5); 
+}
+
+.mini-color-btn { 
+    width: 20px; height: 20px; border-radius: 2px; cursor: pointer; border: 1px solid #555; box-sizing: border-box; transition: 0.1s;
+}
+.mini-color-btn:hover { border-color: #fff; transform: scale(1.1); z-index: 2; }
+
+/* Кнопка удаления - СПРАВА */
+.point-delete-badge { 
+    pointer-events: auto; position: absolute; left: 25px; top: 50%; transform: translateY(-50%);
+    width: 24px; height: 24px; background: #1a1e24; border: 1px solid #FF4444; border-radius: 4px; 
+    display: flex; align-items: center; justify-content: center; cursor: pointer; 
+    transition: 0.2s; box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+}
+
+.point-delete-badge svg { width: 14px; height: 14px; stroke: #FF4444; stroke-width: 2; fill: none; transition: 0.2s; }
+.point-delete-badge:hover { background: #FF4444; }
+.point-delete-badge:hover svg { stroke: #fff; }
+
+/* Всплывающая подсказка (Tooltip) */
+.del-tooltip { 
+    position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); 
+    background: #000; color: #fff; padding: 4px 8px; border-radius: 2px; font-size: 10px; 
+    font-family: 'Roboto Mono', monospace; white-space: nowrap; border: 1px solid #444;
+    opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; pointer-events: none; 
+}
+.point-delete-badge:hover .del-tooltip { opacity: 1; visibility: visible; }
+
+/* Управление группами */
+.group-item { padding: 8px; background: #111; border: 1px solid #333; margin-bottom: 4px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.group-item.active { border-color: var(--neon-blue); background: rgba(0, 174, 239, 0.1); }
+.group-name { font-size: 12px; font-family: 'Roboto Mono'; }
+.btn-add-group { width: 100%; padding: 8px; background: transparent; border: 1px dashed #555; color: #888; margin-top: 10px; cursor: pointer; font-family: 'Roboto Mono'; font-size: 12px; }
+.btn-add-group:hover { border-color: #aaa; color: #fff; }
+.group-status { width: 6px; height: 6px; background: #444; border-radius: 50%; margin-right: 8px; }
+.group-item.active .group-status { background: var(--active-color); }
+
+/* Help Button */
+#help-toggle-btn { 
+    position: absolute; top: 70px; right: 20px; z-index: 5000; 
+    width: 36px; height: 36px; 
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; 
+    color: #aaa; cursor: pointer; font-family: 'Roboto Mono';
+}
+
+/* Утилиты */
+.select-wrapper { position: relative; }
+.select-wrapper::after { content: '▼'; position: absolute; right: 10px; top: 10px; font-size: 10px; color: #666; pointer-events: none; }
+#file-input { display: none; }
+
+/* Анимация загрузки */
+body { opacity: 0; visibility: hidden; transition: opacity 0.3s; }
+body.loaded { opacity: 1; visibility: visible; }
