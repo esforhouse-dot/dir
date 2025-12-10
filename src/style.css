@@ -307,3 +307,26 @@ body.loaded { opacity: 1; visibility: visible; }
     line-height: 1; 
     z-index: 1000;
 }
+/* --- MOBILE OPTIMIZATION --- */
+@media (max-width: 600px) {
+    /* Скрываем лишние кнопки на телефоне, чтобы влезло */
+    #btn-load, #btn-save, #btn-ruler, #btn-bom {
+        display: none;
+    }
+    
+    /* Увеличиваем размер кнопок для пальцев */
+    .icon-btn {
+        width: 40px; 
+        height: 40px;
+    }
+    
+    /* Уменьшаем масштаб, чтобы видеть больше карты */
+    :root {
+        --icon-scale: 0.6;
+    }
+    
+    /* Левая панель чуть ниже */
+    #left-panel {
+        top: 80px;
+    }
+}
