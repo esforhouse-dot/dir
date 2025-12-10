@@ -15,15 +15,22 @@ export const TRANSLATIONS = {
     dist: 'Распред.',
     main: 'Магистраль',
     drop: 'Дроп',
-    // Статусы задач
     active: 'Выполняется',
     done: 'Выполнено',
     canceled: 'Закрыто без выполнения'
 };
 
-// Цвета для статусов задач
 export const TASK_COLORS = {
-    active: '#00AEEF', // Синий (Выполняется)
-    done: '#00CC44',   // Зеленый (Готово)
-    canceled: '#FF4444' // Красный (Отмена)
+    active: '#00AEEF', // Синий
+    done: '#00CC44',   // Зеленый
+    canceled: '#FF4444' // Красный
 };
+
+// --- НАСТРОЙКИ SUPABASE ---
+// ВСТАВЬ СЮДА СВОИ ДАННЫЕ ИЗ НАСТРОЕК SUPABASE!
+export const SUPABASE_URL = 'https://ynavkkfyupwshqvvhrtb.supabase.co'; 
+export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InluYXZra2Z5dXB3c2hxdnZocnRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNDc4OTAsImV4cCI6MjA4MDkyMzg5MH0.-vJwYlCDVDhm_Zo7NRwYlV_dZx0-pVe74kt7shuuc28';
+
+// ID проекта в базе данных. Пока используем 1 для всех.
+// В будущем сюда можно подставлять ID из URL (для разных городов/чертежей).
+export const PROJECT_ID = 1;
