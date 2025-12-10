@@ -3,7 +3,6 @@ import { formatLength, debounce } from './utils.js';
 import { saveToStorage } from './storage.js';
 import { COLORS } from './config.js';
 
-// Словарь дефолтных названий
 const DEFAULT_NAMES = {
     pole: 'Опора',
     light: 'Светильник',
@@ -26,8 +25,6 @@ class CadCore {
         this.ghostLine = null;
         this.cursorTip = null;
         this.deleteBtn = null;
-        
-        // Ссылка на обработчик движения мыши (для рисования)
         this._moveHandler = null;
     }
 
@@ -58,9 +55,18 @@ class CadCore {
             if(window.App.ui) window.App.ui.updateZoomDisplay();
         });
         
+        // Поддержка Мыши
         document.addEventListener('mousemove', (e) => {
             state.mousePos = { x: e.clientX, y: e.clientY };
         });
+
+        // --- ВАЖНО ДЛЯ МОБИЛОК: Отслеживаем касание ---
+        // Чтобы обновлять позицию курсора при таче (для меню инструментов)
+        document.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) {
+                state.mousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        }, { passive: true });
     }
 
     continueLine(targetLine, clickCoords) {
@@ -276,7 +282,6 @@ class CadCore {
             saveToStorage();
         });
 
-        // --- КЛИКИ И КОНТЕКСТНОЕ МЕНЮ ---
         obj.events.add('click', (e) => {
             if (state.tool === 'eraser') {
                  const type = obj.geometry.getType();
