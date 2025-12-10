@@ -13,6 +13,10 @@ if (SUPABASE_URL && SUPABASE_KEY && SUPABASE_URL.includes('http')) {
     console.warn("Supabase credentials not set in config.js");
 }
 
+// --- ФЛАГ БЛОКИРОВКИ СОХРАНЕНИЯ ---
+// Важно! Запрещает сохранять данные, пока они еще загружаются из базы.
+let isLoading = false; 
+
 // Сборка данных (JSON) с защитой от ошибок
 function getProjectData() {
     if(!cadCore.objects) return null;
@@ -29,20 +33,20 @@ function getProjectData() {
             // ЛИНИИ
             if (type === 'LineString') {
                 const coords = obj.geometry.getCoordinates();
-                // ВАЖНО: Не сохраняем линии без координат (защита от багов)
-                if (!coords || coords.length < 2) return;
-
-                data.push({ 
-                    type: 'Polyline', 
-                    groupId: gid, 
-                    coords: coords, 
-                    color: obj.options.get('strokeColor'), 
-                    width: obj.options.get('strokeWidth'),
-                    opacity: obj.options.get('strokeOpacity'),
-                    style: obj.options.get('strokeStyle'),
-                    text: obj.properties.get('userText'),
-                    cableData: obj.properties.get('cableData') 
-                });
+                // Сохраняем, если есть хотя бы 2 точки
+                if (coords && coords.length >= 2) {
+                    data.push({ 
+                        type: 'Polyline', 
+                        groupId: gid, 
+                        coords: coords, 
+                        color: obj.options.get('strokeColor'), 
+                        width: obj.options.get('strokeWidth'),
+                        opacity: obj.options.get('strokeOpacity'),
+                        style: obj.options.get('strokeStyle'),
+                        text: obj.properties.get('userText'),
+                        cableData: obj.properties.get('cableData') 
+                    });
+                }
             } 
             // ТОЧКИ
             else if (type === 'Point') {
@@ -90,8 +94,7 @@ function getProjectData() {
                 });
             }
         } catch (objErr) {
-            console.warn("Ошибка при сохранении объекта:", objErr);
-            // Пропускаем "битый" объект, но продолжаем сохранение остальных
+            console.warn("Skip broken object during save", objErr);
         }
     });
     
@@ -102,10 +105,17 @@ function getProjectData() {
 let saveTimeout = null;
 
 export async function saveToStorage() {
+    // 1. ГЛАВНАЯ ЗАЩИТА: Если мы сейчас загружаем данные - НЕ СОХРАНЯЕМ!
+    // Это предотвращает перезапись базы пустыми данными при старте.
+    if (isLoading) {
+        console.log("Save blocked: loading in progress");
+        return;
+    }
+
     const storageObj = getProjectData();
     if (!storageObj) return;
 
-    // Считаем размер данных в памяти для отображения в UI
+    // UI: Размер
     const jsonString = JSON.stringify(storageObj);
     const sizeKB = (jsonString.length / 1024).toFixed(1);
     if(document.getElementById('storage-val')) {
@@ -113,7 +123,6 @@ export async function saveToStorage() {
     }
 
     if (supabase) {
-        // Debounce: ждем 1.5 секунды, чтобы не спамить базу при рисовании
         if (saveTimeout) clearTimeout(saveTimeout);
         
         // Показываем индикатор
@@ -126,15 +135,16 @@ export async function saveToStorage() {
         }
 
         saveTimeout = setTimeout(async () => {
+            // Повторная проверка перед самой отправкой
+            if (isLoading) return; 
+
             try {
-                // Upsert: Записываем в базу
                 const { error } = await supabase
                     .from('projects')
                     .upsert({ id: PROJECT_ID, data: storageObj });
 
                 if (error) throw error;
 
-                // Успех
                 if(window.App && window.App.ui) {
                     window.App.ui.showNotification('Сохранено в облако');
                 }
@@ -144,7 +154,7 @@ export async function saveToStorage() {
                     window.App.ui.showNotification('Ошибка облака', true);
                 }
             }
-        }, 1500); 
+        }, 2000); // Увеличили задержку до 2 сек для надежности
     }
 }
 
@@ -166,6 +176,9 @@ export async function loadFromStorage() {
         return;
     }
 
+    // ВКЛЮЧАЕМ БЛОКИРОВКУ СОХРАНЕНИЯ
+    isLoading = true;
+
     try {
         console.log("Загрузка из облака...");
         const { data, error } = await supabase
@@ -177,11 +190,10 @@ export async function loadFromStorage() {
         if (error) {
             console.warn("Проект пуст или ошибка", error);
             if(window.App && window.App.ui) window.App.ui.showNotification('Новый проект', false);
-            return;
-        }
-
-        if (data && data.data) {
+        } else if (data && data.data) {
+            // Применяем данные
             applyData(data.data);
+            
             if(window.App && window.App.ui) {
                 window.App.ui.renderGroupsList();
                 window.App.ui.showNotification('Загружено из облака');
@@ -190,6 +202,12 @@ export async function loadFromStorage() {
     } catch (e) {
         console.error("Critical load error", e);
         if(window.App && window.App.ui) window.App.ui.showNotification('Ошибка сети', true);
+    } finally {
+        // СНИМАЕМ БЛОКИРОВКУ СОХРАНЕНИЯ (с небольшой задержкой)
+        setTimeout(() => {
+            isLoading = false;
+            console.log("Loading finished, save unlocked.");
+        }, 1000);
     }
 }
 
@@ -210,7 +228,6 @@ function applyData(parsed) {
             const gid = item.groupId || 1;
             
             if (item.type === 'Polyline') {
-                // Проверка на валидность координат линии
                 if (!item.coords || !Array.isArray(item.coords) || item.coords.length < 2) return;
 
                 const sOp = (item.opacity !== undefined) ? item.opacity : 1.0; 
@@ -252,16 +269,16 @@ function applyData(parsed) {
                 if(item.coords && item.coords[0]) allPoints = allPoints.concat(item.coords[0]);
             }
         } catch (e) {
-            console.error("Ошибка восстановления объекта:", e);
+            console.error("Error restoring object:", e);
         }
     });
 
-    // Принудительно обновляем видимость слоев
     cadCore.updateVisibility();
 
     if (allPoints.length > 0 && cadCore.map) {
         try {
             const bounds = ymaps.util.bounds.fromPoints(allPoints);
+            // Плавный зум к объектам при старте
             cadCore.map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50, duration: 500 });
         } catch(e) {}
     }
