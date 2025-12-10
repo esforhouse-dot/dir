@@ -26,11 +26,9 @@ export const TASK_COLORS = {
     canceled: '#FF4444' // Красный
 };
 
-// --- НАСТРОЙКИ SUPABASE ---
-// ВСТАВЬ СЮДА СВОИ ДАННЫЕ ИЗ НАСТРОЕК SUPABASE!
-export const SUPABASE_URL = 'https://ynavkkfyupwshqvvhrtb.supabase.co'; 
-export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InluYXZra2Z5dXB3c2hxdnZocnRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNDc4OTAsImV4cCI6MjA4MDkyMzg5MH0.-vJwYlCDVDhm_Zo7NRwYlV_dZx0-pVe74kt7shuuc28';
+// --- НАСТРОЙКИ ТВОЕГО СЕРВЕРА ---
+// Замени 0.0.0.0 на IP твоего VPS (который ты вводил в FileZilla)
+// Оставь :3000/project/1 на конце
+export const API_URL = 'http://147.45.212.205:3000/project/1'; 
 
-// ID проекта в базе данных. Пока используем 1 для всех.
-// В будущем сюда можно подставлять ID из URL (для разных городов/чертежей).
 export const PROJECT_ID = 1;
