@@ -18,10 +18,20 @@
             transition: opacity 0.4s ease-in;
             background-color: #0f1115;
             overflow: hidden;
+            
+            /* CSS ЗАЩИТА: Если JS сломался, CSS сам покажет сайт через 5 секунд */
+            animation: force-reveal 0.1s forwards 5s; 
         }
+        
         body.loaded {
             opacity: 1;
             visibility: visible;
+            animation: none; /* Отменяем анимацию, если JS сработал раньше */
+        }
+
+        /* Ключевые кадры для аварийного появления */
+        @keyframes force-reveal {
+            to { opacity: 1; visibility: visible; }
         }
     </style>
 
@@ -121,7 +131,6 @@
                 </div>
             </div>
 
-            <!-- Комментарии теперь всегда видны, чтобы видеть историю -->
             <div class="form-group">
                 <label style="color: var(--text-muted);">Комментарий / Причина</label>
                 <textarea id="task-comment-input" rows="3" placeholder="Заметки, причины отмены или возврата..."></textarea>
