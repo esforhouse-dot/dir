@@ -1,22 +1,8 @@
 import { state } from './state.js';
 import { cadCore } from './cad-core.js';
-import { COLORS, SUPABASE_URL, SUPABASE_KEY, PROJECT_ID } from './config.js';
+import { API_URL } from './config.js'; // Берем адрес твоего сервера
 
-// --- ИНИЦИАЛИЗАЦИЯ SUPABASE (ЧЕРЕЗ ГЛОБАЛЬНЫЙ СКРИПТ) ---
-let supabase = null;
-
-if (window.supabase) {
-    if (SUPABASE_URL && SUPABASE_KEY && SUPABASE_URL.includes('http')) {
-        // Создаем клиент через глобальную переменную window.supabase
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } else {
-        console.warn("Supabase credentials not set in config.js");
-    }
-} else {
-    console.warn("Supabase library not loaded (Offline mode)");
-}
-
-// --- ФЛАГ БЛОКИРОВКИ СОХРАНЕНИЯ ---
+// --- ФЛАГ БЛОКИРОВКИ ---
 let isLoading = false; 
 
 function getProjectData() {
@@ -61,6 +47,7 @@ function getProjectData() {
 
 let saveTimeout = null;
 
+// --- СОХРАНЕНИЕ НА СВОЙ СЕРВЕР ---
 export async function saveToStorage() {
     if (isLoading) return;
 
@@ -68,25 +55,44 @@ export async function saveToStorage() {
     if (!storageObj) return;
 
     const jsonString = JSON.stringify(storageObj);
-    const sizeKB = (jsonString.length / 1024).toFixed(1);
-    if(document.getElementById('storage-val')) document.getElementById('storage-val').innerText = sizeKB;
-
-    if (supabase) {
-        if (saveTimeout) clearTimeout(saveTimeout);
-        const ind = document.getElementById('save-indicator');
-        if (ind) { ind.innerHTML = '☁️ Синхронизация...'; ind.classList.add('show'); ind.style.background = 'rgba(0, 174, 239, 0.2)'; ind.style.borderColor = '#00AEEF'; }
-
-        saveTimeout = setTimeout(async () => {
-            if (isLoading) return; 
-            try {
-                const { error } = await supabase.from('projects').upsert({ id: PROJECT_ID, data: storageObj });
-                if (error) throw error;
-                if(window.App && window.App.ui) window.App.ui.showNotification('Сохранено в облако');
-            } catch (err) {
-                if(window.App && window.App.ui) window.App.ui.showNotification('Ошибка облака', true);
-            }
-        }, 2000); 
+    if(document.getElementById('storage-val')) {
+        document.getElementById('storage-val').innerText = (jsonString.length / 1024).toFixed(1);
     }
+
+    if (saveTimeout) clearTimeout(saveTimeout);
+    
+    const ind = document.getElementById('save-indicator');
+    if (ind) {
+        ind.innerHTML = '☁️ Сохранение...';
+        ind.classList.add('show');
+        ind.style.background = 'rgba(0, 174, 239, 0.2)'; 
+        ind.style.borderColor = '#00AEEF';
+    }
+
+    saveTimeout = setTimeout(async () => {
+        if (isLoading) return; 
+
+        try {
+            // ОТПРАВЛЯЕМ POST ЗАПРОС
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(storageObj)
+            });
+
+            if (!response.ok) throw new Error('Server Error');
+
+            if(window.App && window.App.ui) {
+                window.App.ui.showNotification('Сохранено');
+            }
+        } catch (err) {
+            console.error("Save error:", err);
+            // Если ошибка Mixed Content, она отобразится здесь
+            if(window.App && window.App.ui) {
+                window.App.ui.showNotification('Ошибка сети (Проверь HTTP/HTTPS)', true);
+            }
+        }
+    }, 2000); 
 }
 
 export function saveToFile() {
@@ -95,35 +101,33 @@ export function saveToFile() {
     const json = JSON.stringify(storageObj, null, 2); 
     const blob = new Blob([json], {type: "application/json"}); 
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `project_cloud_${new Date().getTime()}.json`; 
+    const a = document.createElement('a'); a.href = url; a.download = `project.json`; 
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
+// --- ЗАГРУЗКА СО СВОЕГО СЕРВЕРА ---
 export async function loadFromStorage() {
     isLoading = true;
 
     try {
-        let dataLoaded = false;
+        console.log("Загрузка с сервера...", API_URL);
         
-        // 1. Пробуем облако
-        if (supabase) {
-            console.log("Loading from Cloud...");
-            const { data, error } = await supabase.from('projects').select('data').eq('id', PROJECT_ID).single();
-            if (!error && data && data.data) {
-                applyData(data.data);
-                if(window.App && window.App.ui) window.App.ui.showNotification('Загружено из облака');
-                dataLoaded = true;
+        // ДЕЛАЕМ GET ЗАПРОС
+        const response = await fetch(API_URL);
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data) {
+                applyData(data);
+                if(window.App && window.App.ui) window.App.ui.showNotification('Загружено');
             }
+        } else {
+            console.warn("Server response not OK", response.status);
+            if(window.App && window.App.ui) window.App.ui.showNotification('Новый проект', false);
         }
-
-        // 2. Если облако не сработало (нет интернета/ошибка), пробуем локально
-        if (!dataLoaded) {
-             // Логика локальной загрузки (опционально, если нужно хранить копию)
-             // Пока оставляем пустой, так как переходим на чистое облако
-        }
-
     } catch (e) {
-        console.error("Critical load error", e);
+        console.error("Load error", e);
+        if(window.App && window.App.ui) window.App.ui.showNotification('Сервер недоступен', true);
     } finally {
         setTimeout(() => { isLoading = false; }, 1000);
     }
@@ -133,6 +137,7 @@ function applyData(parsed) {
     const objects = parsed.objects || [];
     state.groups = parsed.groups || [{id: 1, name: 'Группа 1'}];
     state.activeGroupId = parsed.activeGroupId || 1;
+    
     let allPoints = [];
     cadCore.objects.removeAll();
     cadCore.labels.removeAll();
@@ -142,11 +147,15 @@ function applyData(parsed) {
             const gid = item.groupId || 1;
             if (item.type === 'Polyline') {
                 if (!item.coords || !Array.isArray(item.coords) || item.coords.length < 2) return;
-                const sOp = (item.opacity !== undefined) ? item.opacity : 1.0; 
-                const sStyle = item.style || 'solid';
-                const poly = new ymaps.Polyline(item.coords, { groupId: gid, userText: item.text, hintContent: item.text, cableData: item.cableData }, { strokeColor: item.color, strokeWidth: item.width || 6, strokeOpacity: sOp, strokeStyle: sStyle });
+                const poly = new ymaps.Polyline(item.coords, { 
+                    groupId: gid, userText: item.text, hintContent: item.text, cableData: item.cableData 
+                }, { 
+                    strokeColor: item.color, strokeWidth: item.width || 6, 
+                    strokeOpacity: item.opacity || 1, strokeStyle: item.style || 'solid' 
+                });
                 cadCore.setupPolyline(poly);
                 allPoints = allPoints.concat(item.coords);
+
             } else if (item.type === 'Point') { 
                 if (item.subtype === 'task') {
                     cadCore.placePointObject(item.subtype, item.coords, item.text, gid, item.iconColor);
